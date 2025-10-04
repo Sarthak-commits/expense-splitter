@@ -66,7 +66,12 @@ High-level architecture
 - Group detail page
   - Route: src/app/groups/[id]/page.tsx (server component)
   - Access control: only creator or members can view; non-members 404
-  - Currently renders: group name, member list, recent expenses (last 10), placeholders for “Add expense” and “Balances”
+  - Renders: group name, member list, recent expenses (last 10), and an "Add expense" form (equal split) plus a Balances placeholder
+- Expense creation
+  - API: POST /api/groups/[id]/expenses
+  - AuthZ: requester must be creator or member
+  - Input: { description, amount, currency="USD" }
+  - Behavior: creates Expense (paidBy = current user) and equal ExpenseSplits across all members
 - Data layer (Prisma)
   - Prisma Client singleton pattern in src/lib/db.ts prevents multiple clients in dev
   - Schema models (see prisma/schema.prisma): User, Group, GroupMember, Expense, ExpenseSplit, Settlement
@@ -84,8 +89,13 @@ Verification: Session Provider
 
 Verification: Group Detail Page
 - Create a group at /groups, then click into the group link
-- Expected: group page shows Members, Recent expenses (possibly empty), and "Balances (coming soon)"
+- Expected: group page shows Members, an Add expense form, Recent expenses (possibly empty), and "Balances (coming soon)"
 - Non-members attempting to open the URL should receive a 404
+
+Verification: Expense Creation (Equal split)
+- Open /groups/[id]
+- Enter a description and amount (e.g., 12.34) and submit
+- Expected: form clears and the new expense appears in Recent expenses; multiple members should be split equally (server-side)
 
 Verification: Navigation and Logout
 - Start dev: npm run dev

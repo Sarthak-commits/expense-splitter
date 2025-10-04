@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import ExpenseForm from "@/components/ExpenseForm";
 
 export default async function GroupDetailPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -69,6 +70,13 @@ export default async function GroupDetailPage({ params }: { params: { id: string
       </section>
 
       <section>
+        <h2 className="text-lg font-medium mb-2">Add expense</h2>
+        {/* client-side form */}
+        {/* @ts-expect-error Server Component to Client Component boundary */}
+        <ExpenseForm groupId={group.id} />
+      </section>
+
+      <section>
         <h2 className="text-lg font-medium mb-2">Recent expenses</h2>
         {group.expenses.length === 0 ? (
           <p className="text-sm text-gray-600">No expenses yet. Add one to get started.</p>
@@ -87,12 +95,6 @@ export default async function GroupDetailPage({ params }: { params: { id: string
             ))}
           </ul>
         )}
-        {/* Placeholder button for future expense creation */}
-        <div className="mt-3">
-          <button className="bg-black text-white rounded px-4 py-2 opacity-60 cursor-not-allowed" disabled>
-            Add expense (coming soon)
-          </button>
-        </div>
       </section>
 
       <section>
