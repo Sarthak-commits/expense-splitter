@@ -74,6 +74,12 @@ High-level architecture
 - API routes
   - POST /api/auth/register: Validates input, ensures unique email, stores hashed password
   - GET/POST /api/groups: Requires session; lists groups for the user; creates a group and adds creator as OWNER
+  - DELETE /api/groups/[id]: Owner-only delete; cascades related data in a transaction
+  - POST /api/groups/[id]/leave: Member leaves group (owner cannot leave)
+  - POST /api/groups/[id]/transfer-ownership: Owner moves ownership to another member
+  - POST /api/groups/[id]/invites: Owner creates invite for an email (returns token)
+  - POST /api/invites/accept: Authenticated user with matching email accepts invite token
+  - GET /api/groups/[id]/settlement-suggestions: Returns a list of suggested transfers to settle balances
 - Group detail page
   - Route: src/app/groups/[id]/page.tsx (server component)
   - Access control: only creator or members can view; non-members 404
@@ -86,20 +92,23 @@ High-level architecture
   - Behavior: creates Expense (paidBy = current user)
     - EQUAL: server computes equal ExpenseSplits across all members (rounded, sums to total)
     - EXACT: server validates provided per-member amounts and creates ExpenseSplits
+    - PERCENT: server validates percents sum to 100 and converts to amounts that sum to total (rounded)
 - Balances (basic)
   - Computation on server in group page: for each user, net = (sum paid) - (sum owed via ExpenseSplits) + (sent settlements) - (received settlements)
   - Positive = user is owed; Negative = user owes
 - Data layer (Prisma)
   - Prisma Client singleton pattern in src/lib/db.ts prevents multiple clients in dev
-  - Schema models (see prisma/schema.prisma): User, Group, GroupMember, Expense, ExpenseSplit, Settlement
-    - Groups have creator, members, expenses, and settlements
+  - Schema models (see prisma/schema.prisma): User, Group, GroupMember, Expense, ExpenseSplit, Settlement, Invitation
+    - Groups have creator, members, expenses, settlements, and pending invitations
     - Expense splits model per-user owed amounts per expense
   - Migrations are present in prisma/migrations/
+  - Note: New Invitation model added. Run a migration after pulling changes:
+    - npm run prisma:migrate -- --name add-invitations
 
 - Expense editing/deleting
   - API: PATCH/DELETE /api/expenses/[expenseId]
   - Permissions: only payer or group owner can modify/delete an expense
-  - PATCH supports updating description, currency, and amount (recomputes equal splits for now)
+  - PATCH supports updating description, currency, and amount; can also switch to EXACT or PERCENT splits with provided data
 
 Operational tips
 - Ensure npm run prisma:generate is executed whenever the Prisma schema changes
