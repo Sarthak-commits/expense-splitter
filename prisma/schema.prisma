@@ -1,0 +1,111 @@
+// Prisma schema for Expense Splitter (SQLite for local dev)
+// Switch to Postgres for production later by updating the datasource.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  image        String?
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  groups           Group[]        @relation("GroupCreator")
+  memberships      GroupMember[]
+  expensesPaid     Expense[]      @relation("ExpensePayer")
+  expenseSplits    ExpenseSplit[]
+  settlementsFrom  Settlement[]   @relation("SettlementFrom")
+  settlementsTo    Settlement[]   @relation("SettlementTo")
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Group {
+  id          String        @id @default(cuid())
+  name        String
+  createdById String
+  createdBy   User          @relation("GroupCreator", fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now())
+
+  members     GroupMember[]
+  expenses    Expense[]
+  settlements Settlement[]
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  role     MemberRole @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+}
+
+enum SplitType {
+  EQUAL
+  EXACT
+  PERCENT
+}
+
+model Expense {
+  id          String    @id @default(cuid())
+  groupId     String
+  paidById    String
+  amount      Decimal
+  currency    String    @default("USD")
+  description String
+  date        DateTime  @default(now())
+  splitType   SplitType @default(EQUAL)
+  createdAt   DateTime  @default(now())
+
+  group   Group @relation(fields: [groupId], references: [id])
+  paidBy  User  @relation("ExpensePayer", fields: [paidById], references: [id])
+  splits  ExpenseSplit[]
+}
+
+model ExpenseSplit {
+  id        String   @id @default(cuid())
+  expenseId String
+  userId    String
+  // Final amount owed by the user for this expense after applying split logic
+  amount    Decimal
+
+  expense Expense @relation(fields: [expenseId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([expenseId, userId])
+}
+
+model Settlement {
+  id          String   @id @default(cuid())
+  groupId     String
+  fromUserId  String
+  toUserId    String
+  amount      Decimal
+  createdAt   DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id])
+  from  User  @relation("SettlementFrom", fields: [fromUserId], references: [id])
+  to    User  @relation("SettlementTo", fields: [toUserId], references: [id])
+
+  @@index([groupId])
+  @@index([fromUserId])
+  @@index([toUserId])
+}
