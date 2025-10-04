@@ -20,7 +20,7 @@ export async function POST(
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-  const { description, amount, currency } = parsed.data;
+  const { description, amount, currency, splitType, splits } = parsed.data as any;
 
   // parse amount safely into Decimal
   let decimalAmount: Prisma.Decimal;
@@ -54,7 +54,41 @@ export async function POST(
     return NextResponse.json({ error: "Group has no members to split with" }, { status: 400 });
   }
 
-  const splits = computeEqualSplits(decimalAmount, memberIds);
+  let splitRows: { userId: string; amount: Prisma.Decimal }[] = [];
+  if (splitType && splitType === "EXACT") {
+    // Validate provided splits
+    if (!Array.isArray(splits)) {
+      return NextResponse.json({ error: "splits array required for EXACT" }, { status: 400 });
+    }
+    const provided = new Map<string, Prisma.Decimal>();
+    try {
+      for (const s of splits) {
+        if (typeof s?.userId !== "string" || (typeof s?.amount !== "string" && typeof s?.amount !== "number")) {
+          return NextResponse.json({ error: "Invalid splits format" }, { status: 400 });
+        }
+        const amtStr = typeof s.amount === "number" ? s.amount.toString() : s.amount;
+        const dec = new Prisma.Decimal(amtStr);
+        if (dec.lt(0)) return NextResponse.json({ error: "Split amounts must be >= 0" }, { status: 400 });
+        provided.set(s.userId, new Prisma.Decimal(dec.toFixed(2)));
+      }
+    } catch {
+      return NextResponse.json({ error: "Invalid split amounts" }, { status: 400 });
+    }
+    // Ensure all and only group members are present
+    for (const uid of memberIds) {
+      if (!provided.has(uid)) return NextResponse.json({ error: "All members must have a split amount" }, { status: 400 });
+    }
+    if (provided.size !== memberIds.length) {
+      return NextResponse.json({ error: "Unexpected users in splits" }, { status: 400 });
+    }
+    const sum = Array.from(provided.values()).reduce((acc, d) => acc.plus(d), new Prisma.Decimal(0));
+    if (!sum.equals(new Prisma.Decimal(decimalAmount.toFixed(2)))) {
+      return NextResponse.json({ error: "Split amounts must sum to total amount" }, { status: 400 });
+    }
+    splitRows = memberIds.map((uid) => ({ userId: uid, amount: provided.get(uid)! }));
+  } else {
+    splitRows = computeEqualSplits(decimalAmount, memberIds);
+  }
 
   try {
     const created = await prisma.$transaction(async (tx) => {

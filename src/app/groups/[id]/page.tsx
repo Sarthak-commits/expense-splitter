@@ -6,6 +6,7 @@ import Link from "next/link";
 import ExpenseForm from "@/components/ExpenseForm";
 import MemberManager from "@/components/MemberManager";
 import SettlementForm from "@/components/SettlementForm";
+import ExpenseActions from "@/components/ExpenseActions";
 import { Prisma } from "@prisma/client";
 import { computeBalances } from "@/lib/balances";
 
@@ -124,7 +125,7 @@ export default async function GroupDetailPage({ params, searchParams }: { params
         <h2 className="text-lg font-medium mb-2">Add expense</h2>
         {/* client-side form */}
         {/* @ts-expect-error Server Component to Client Component boundary */}
-        <ExpenseForm groupId={group.id} />
+        <ExpenseForm groupId={group.id} members={group.members.map((m) => ({ id: m.user.id, name: m.user.name, email: m.user.email! }))} />
       </section>
 
       <section>
@@ -139,8 +140,10 @@ export default async function GroupDetailPage({ params, searchParams }: { params
                   <div className="font-medium">{e.description}</div>
                   <div className="text-gray-600">Paid by {e.paidBy.name || e.paidBy.email}</div>
                 </div>
-                <div className="text-right">
+                <div className="text-right space-y-1">
                   <div className="font-mono">{e.amount.toString()} {e.currency}</div>
+                  {/* @ts-expect-error Server to Client boundary */}
+                  <ExpenseActions expenseId={e.id} canModify={group.createdById === userId || e.paidBy.id === userId} />
                 </div>
               </li>
             ))}

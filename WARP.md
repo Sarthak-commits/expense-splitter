@@ -81,9 +81,11 @@ High-level architecture
 - Expense creation
   - API: POST /api/groups/[id]/expenses
   - AuthZ: requester must be creator or member
-  - Input: { description, amount, currency="USD" }
-  - Validation: currency restricted to USD (server + client), amount must be a positive number with up to 2 decimals
-  - Behavior: creates Expense (paidBy = current user) and equal ExpenseSplits across all members
+  - Input: { description, amount, currency="USD", splitType?="EQUAL" | "EXACT", splits?=[{userId, amount}] }
+  - Validation: currency restricted to USD (server + client), amount must be a positive number with up to 2 decimals; for EXACT, split amounts must be >= 0 and sum to total
+  - Behavior: creates Expense (paidBy = current user)
+    - EQUAL: server computes equal ExpenseSplits across all members (rounded, sums to total)
+    - EXACT: server validates provided per-member amounts and creates ExpenseSplits
 - Balances (basic)
   - Computation on server in group page: for each user, net = (sum paid) - (sum owed via ExpenseSplits) + (sent settlements) - (received settlements)
   - Positive = user is owed; Negative = user owes
@@ -93,6 +95,11 @@ High-level architecture
     - Groups have creator, members, expenses, and settlements
     - Expense splits model per-user owed amounts per expense
   - Migrations are present in prisma/migrations/
+
+- Expense editing/deleting
+  - API: PATCH/DELETE /api/expenses/[expenseId]
+  - Permissions: only payer or group owner can modify/delete an expense
+  - PATCH supports updating description, currency, and amount (recomputes equal splits for now)
 
 Operational tips
 - Ensure npm run prisma:generate is executed whenever the Prisma schema changes
@@ -107,10 +114,11 @@ Verification: Group Detail Page
 - Expected: group page shows Members, an Add expense form, Recent expenses (possibly empty), and "Balances (coming soon)"
 - Non-members attempting to open the URL should receive a 404
 
-Verification: Expense Creation (Equal split)
+Verification: Expense Creation (Equal/Custom)
 - Open /groups/[id]
-- Enter a description and amount (e.g., 12.34) and submit
-- Expected: form clears and the new expense appears in the Expenses list; multiple members should be split equally (server-side)
+- Enter a description and amount; choose Equal or Custom split.
+- For Custom, input amounts for each member that sum exactly to the total.
+- Expected: form clears and the new expense appears in the Expenses list; equal split is computed server-side, custom amounts are stored as provided.
 
 Verification: Expense Display (pagination)
 - Open /groups/[id]
