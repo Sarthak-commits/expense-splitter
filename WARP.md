@@ -95,7 +95,12 @@ Verification: Group Detail Page
 Verification: Expense Creation (Equal split)
 - Open /groups/[id]
 - Enter a description and amount (e.g., 12.34) and submit
-- Expected: form clears and the new expense appears in Recent expenses; multiple members should be split equally (server-side)
+- Expected: form clears and the new expense appears in the Expenses list; multiple members should be split equally (server-side)
+
+Verification: Expense Display (pagination)
+- Open /groups/[id]
+- You should see up to 20 most recent expenses
+- If there are more, a "Load more" link appears; clicking it appends ?cursor=... and shows the next page
 
 Verification: Navigation and Logout
 - Start dev: npm run dev
