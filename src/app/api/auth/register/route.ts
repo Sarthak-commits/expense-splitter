@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hash } from "bcryptjs";
-
-const registerSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).max(100),
-  password: z.string().min(6).max(100),
-});
+import { registerSchema } from "@/lib/schemas";
 
 export async function POST(req: Request) {
   try {

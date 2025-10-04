@@ -4,7 +4,10 @@ import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import ExpenseForm from "@/components/ExpenseForm";
+import MemberManager from "@/components/MemberManager";
+import SettlementForm from "@/components/SettlementForm";
 import { Prisma } from "@prisma/client";
+import { computeBalances } from "@/lib/balances";
 
 export default async function GroupDetailPage({ params, searchParams }: { params: { id: string }, searchParams?: { cursor?: string } }) {
   const session = await getServerSession(authOptions);
@@ -63,44 +66,24 @@ export default async function GroupDetailPage({ params, searchParams }: { params
 
   // Compute basic balances for all members: paid - owed, adjusted by settlements
   const memberIds = group.members.map((m) => m.user.id);
-  const zero = new Prisma.Decimal(0);
-  const net: Record<string, Prisma.Decimal> = Object.fromEntries(
-    memberIds.map((id) => [id, zero])
-  );
 
   const expensesAll = await prisma.expense.findMany({
     where: { groupId },
     select: { paidById: true, amount: true },
   });
-  for (const e of expensesAll) {
-    if (!net[e.paidById]) net[e.paidById] = zero;
-    net[e.paidById] = net[e.paidById].plus(e.amount);
-  }
-
   const splitsAll = await prisma.expenseSplit.findMany({
     where: { expense: { groupId } },
     select: { userId: true, amount: true },
   });
-  for (const s of splitsAll) {
-    if (!net[s.userId]) net[s.userId] = zero;
-    net[s.userId] = net[s.userId].minus(s.amount);
-  }
-
   const settlements = await prisma.settlement.findMany({
     where: { groupId },
     select: { fromUserId: true, toUserId: true, amount: true },
   });
-  for (const st of settlements) {
-    if (!net[st.fromUserId]) net[st.fromUserId] = zero;
-    if (!net[st.toUserId]) net[st.toUserId] = zero;
-    // Payment from A to B reduces B's receivable and reduces A's payable
-    net[st.fromUserId] = net[st.fromUserId].plus(st.amount);
-    net[st.toUserId] = net[st.toUserId].minus(st.amount);
-  }
 
+  const net = computeBalances(memberIds, expensesAll, splitsAll, settlements);
   const balances = group.members.map((m) => {
     const uid = m.user.id;
-    const value = net[uid] ?? zero;
+    const value = net[uid] ?? new Prisma.Decimal(0);
     const rounded = new Prisma.Decimal(value.toFixed(2));
     return { user: m.user, amount: rounded };
   });
@@ -122,6 +105,19 @@ export default async function GroupDetailPage({ params, searchParams }: { params
             </li>
           ))}
         </ul>
+        {/* Owner controls */}
+        {/* @ts-expect-error Server to Client boundary */}
+        <MemberManager
+          groupId={group.id}
+          ownerUserId={group.createdById}
+          currentUserId={userId}
+          members={group.members.map((m) => ({
+            userId: m.user.id,
+            name: m.user.name,
+            email: m.user.email!,
+            role: m.role,
+          }))}
+        />
       </section>
 
       <section>
@@ -159,7 +155,13 @@ export default async function GroupDetailPage({ params, searchParams }: { params
 
       <section>
         <h2 className="text-lg font-medium mb-2">Balances</h2>
-        <ul className="space-y-1">
+        {/* @ts-expect-error Server to Client boundary */}
+        <SettlementForm
+          groupId={group.id}
+          currentUserId={userId}
+          members={group.members.map((m) => ({ id: m.user.id, name: m.user.name, email: m.user.email! }))}
+        />
+        <ul className="space-y-1 mt-3">
           {balances.map(({ user, amount }) => {
             const n = parseFloat(amount.toString());
             const label = Math.abs(n) < 0.01

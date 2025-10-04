@@ -2,14 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { z } from "zod";
 import { Prisma } from "@prisma/client";
-
-const expenseSchema = z.object({
-  description: z.string().min(1).max(200),
-  amount: z.union([z.string(), z.number()]),
-  currency: z.string().min(3).max(10).default("USD"),
-});
+import { expenseCreateSchema } from "@/lib/schemas";
+import { computeEqualSplits } from "@/lib/split";
 
 export async function POST(
   req: Request,
@@ -21,7 +16,7 @@ export async function POST(
   const groupId = params.id;
 
   const json = await req.json().catch(() => ({}));
-  const parsed = expenseSchema.safeParse(json);
+  const parsed = expenseCreateSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
@@ -59,25 +54,7 @@ export async function POST(
     return NextResponse.json({ error: "Group has no members to split with" }, { status: 400 });
   }
 
-  // Equal split among all members
-  const n = new Prisma.Decimal(memberIds.length);
-  const base = decimalAmount.dividedBy(n);
-  // Round to 2 decimals for display friendliness
-  const baseRounded = new Prisma.Decimal(base.toFixed(2));
-  // Distribute remainder to first few members to ensure sum == amount
-  const totalRounded = baseRounded.mul(n);
-  let remainder = decimalAmount.minus(totalRounded); // could be negative due to rounding
-
-  const splits = memberIds.map((uid) => {
-    let amt = baseRounded;
-    if (!remainder.isZero()) {
-      // Adjust by 0.01 towards the remainder's sign until remainder zero
-      const step = new Prisma.Decimal(remainder.greaterThan(0) ? "0.01" : "-0.01");
-      amt = amt.plus(step);
-      remainder = remainder.minus(step);
-    }
-    return { userId: uid, amount: amt };
-  });
+  const splits = computeEqualSplits(decimalAmount, memberIds);
 
   try {
     const created = await prisma.$transaction(async (tx) => {

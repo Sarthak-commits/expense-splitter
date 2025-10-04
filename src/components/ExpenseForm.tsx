@@ -1,14 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { z } from "zod";
 import { useRouter } from "next/navigation";
-
-const schema = z.object({
-  description: z.string().min(1),
-  amount: z.string().min(1), // keep as string to avoid float issues
-  currency: z.string().min(3).max(10).default("USD"),
-});
+import { expenseCreateSchema } from "@/lib/schemas";
 
 export default function ExpenseForm({ groupId }: { groupId: string }) {
   const router = useRouter();
@@ -21,9 +15,9 @@ export default function ExpenseForm({ groupId }: { groupId: string }) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const parsed = schema.safeParse({ description, amount, currency });
+    const parsed = expenseCreateSchema.safeParse({ description, amount, currency });
     if (!parsed.success) {
-      setError("Please provide description and amount");
+      setError(parsed.error.errors[0]?.message || "Please provide valid inputs");
       return;
     }
     setLoading(true);
@@ -58,7 +52,7 @@ export default function ExpenseForm({ groupId }: { groupId: string }) {
         <input
           type="number"
           step="0.01"
-          min="0"
+          min="0.01"
           placeholder="Amount"
           className="border rounded px-3 py-2 w-32"
           value={amount}

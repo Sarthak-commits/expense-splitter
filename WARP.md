@@ -14,8 +14,12 @@ Project overview
   - Path alias: @/* → ./src/* (see tsconfig.json)
 
 Environment
-- Copy .env.example contents from README into .env (at repo root): DATABASE_URL, NEXTAUTH_URL, NEXTAUTH_SECRET
-- Local defaults (from README): DATABASE_URL="file:./dev.db", NEXTAUTH_URL="http://localhost:3000"
+- Copy .env.example to .env (at repo root) and adjust: DATABASE_URL, NEXTAUTH_URL, NEXTAUTH_SECRET
+- Local defaults: DATABASE_URL="file:./dev.db", NEXTAUTH_URL="http://localhost:3000"
+- Seed data for local dev:
+  - npm run prisma:generate
+  - npm run prisma:migrate -- --name init-or-update
+  - npm run prisma:seed
 
 Common commands
 - Install deps
@@ -41,7 +45,14 @@ Common commands
     - npm run db:push
 
 Notes on testing
-- No test runner/config is present (no test scripts, Jest/Vitest config, or tests directory). Add a test framework before attempting to run tests.
+- Vitest is configured via package.json scripts (no extra config required for pure unit tests).
+- Run tests:
+  - npm run test (CI/one-off)
+  - npm run test:watch (local TDD)
+- Current coverage focuses on:
+  - Equal-split rounding logic (src/lib/split.ts)
+  - Balance computation (src/lib/balances.ts)
+  - Shared input schemas (src/lib/schemas.ts)
 
 High-level architecture
 - Next.js App Router
@@ -71,6 +82,7 @@ High-level architecture
   - API: POST /api/groups/[id]/expenses
   - AuthZ: requester must be creator or member
   - Input: { description, amount, currency="USD" }
+  - Validation: currency restricted to USD (server + client), amount must be a positive number with up to 2 decimals
   - Behavior: creates Expense (paidBy = current user) and equal ExpenseSplits across all members
 - Balances (basic)
   - Computation on server in group page: for each user, net = (sum paid) - (sum owed via ExpenseSplits) + (sent settlements) - (received settlements)
