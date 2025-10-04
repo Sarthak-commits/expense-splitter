@@ -25,6 +25,7 @@ model User {
   expenseSplits    ExpenseSplit[]
   settlementsFrom  Settlement[]   @relation("SettlementFrom")
   settlementsTo    Settlement[]   @relation("SettlementTo")
+  invitationsSent  Invitation[]
 }
 
 enum MemberRole {
@@ -43,6 +44,7 @@ model Group {
   members     GroupMember[]
   expenses    Expense[]
   settlements Settlement[]
+  invitations Invitation[]
 }
 
 model GroupMember {
@@ -108,4 +110,22 @@ model Settlement {
   @@index([groupId])
   @@index([fromUserId])
   @@index([toUserId])
+}
+
+model Invitation {
+  id          String   @id @default(cuid())
+  groupId     String
+  email       String
+  token       String   @unique
+  invitedById String
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+  acceptedAt  DateTime?
+
+  group     Group @relation(fields: [groupId], references: [id])
+  invitedBy User  @relation(fields: [invitedById], references: [id])
+
+  @@index([groupId])
+  @@index([email])
+  @@unique([groupId, email])
 }

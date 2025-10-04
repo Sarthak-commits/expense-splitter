@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { expenseCreateSchema } from "@/lib/schemas";
-import { computeEqualSplits } from "@/lib/split";
+import { computeEqualSplits, computePercentSplits } from "@/lib/split";
 
 export async function POST(
   req: Request,
@@ -55,7 +55,27 @@ export async function POST(
   }
 
   let splitRows: { userId: string; amount: Prisma.Decimal }[] = [];
-  if (splitType && splitType === "EXACT") {
+  if (splitType && splitType === "PERCENT") {
+    if (!Array.isArray(splits)) {
+      return NextResponse.json({ error: "splits array required for PERCENT" }, { status: 400 });
+    }
+    let sumPct = 0;
+    const entries: { userId: string; percent: number }[] = [];
+    for (const s of splits) {
+      if (typeof s?.userId !== "string" || (typeof s?.percent !== "number" && typeof s?.percent !== "string")) {
+        return NextResponse.json({ error: "Invalid splits format" }, { status: 400 });
+      }
+      const pct = typeof s.percent === "string" ? parseFloat(s.percent) : s.percent;
+      if (!(pct >= 0)) return NextResponse.json({ error: "Percent must be >= 0" }, { status: 400 });
+      sumPct += pct;
+      entries.push({ userId: s.userId, percent: pct });
+    }
+    if (Math.abs(sumPct - 100) > 1e-6) return NextResponse.json({ error: "Percents must sum to 100" }, { status: 400 });
+    const set = new Set(entries.map((e) => e.userId));
+    for (const uid of memberIds) if (!set.has(uid)) return NextResponse.json({ error: "All members must have a percent" }, { status: 400 });
+    if (set.size !== memberIds.length) return NextResponse.json({ error: "Unexpected users in splits" }, { status: 400 });
+    splitRows = computePercentSplits(decimalAmount, entries);
+  } else if (splitType && splitType === "EXACT") {
     // Validate provided splits
     if (!Array.isArray(splits)) {
       return NextResponse.json({ error: "splits array required for EXACT" }, { status: 400 });
@@ -99,13 +119,13 @@ export async function POST(
           amount: decimalAmount,
           currency,
           description,
-          splitType: "EQUAL",
+          splitType: (splitType === "EXACT" || splitType === "PERCENT") ? splitType : "EQUAL",
         },
         select: { id: true },
       });
 
       await tx.expenseSplit.createMany({
-        data: splits.map((s) => ({
+        data: splitRows.map((s) => ({
           expenseId: expense.id,
           userId: s.userId,
           amount: s.amount,

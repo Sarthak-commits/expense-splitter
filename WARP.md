@@ -102,8 +102,9 @@ High-level architecture
     - Groups have creator, members, expenses, settlements, and pending invitations
     - Expense splits model per-user owed amounts per expense
   - Migrations are present in prisma/migrations/
-  - Note: New Invitation model added. Run a migration after pulling changes:
+- Note: New Invitation model added. Run a migration after pulling changes:
     - npm run prisma:migrate -- --name add-invitations
+    - If you need to reset dev DB: npx prisma migrate reset (destructive!)
 
 - Expense editing/deleting
   - API: PATCH/DELETE /api/expenses/[expenseId]

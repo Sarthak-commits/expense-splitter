@@ -22,8 +22,8 @@ describe("computeBalances", () => {
 
     const net = computeBalances(members, expenses, splits, settlements);
     // Paid: alice +30, bob +15; Owed: alice -15, bob -15, carol -15; Settlement: bob +5, alice -5
-    expect(net["alice"].toString()).toBe("10.00"); // 30 - 15 - 5
-    expect(net["bob"].toString()).toBe("5.00");   // 15 - 15 + 5
+    expect(net["alice"].toFixed(2)).toBe("10.00"); // 30 - 15 - 5
+    expect(net["bob"].toFixed(2)).toBe("5.00");   // 15 - 15 + 5
     expect(net["carol"].toString()).toBe("-15");  // 0 - 15
   });
 });

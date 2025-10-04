@@ -8,9 +8,9 @@ describe("computeEqualSplits", () => {
     const members = ["u1", "u2"];
     const splits = computeEqualSplits(amount, members);
     const sum = splits.reduce((acc, s) => acc.plus(s.amount), new Prisma.Decimal(0));
-    expect(sum.toString()).toBe("10.00");
-    expect(splits[0].amount.toString()).toBe("5.00");
-    expect(splits[1].amount.toString()).toBe("5.00");
+    expect(sum.toFixed(2)).toBe("10.00");
+    expect(splits[0].amount.toFixed(2)).toBe("5.00");
+    expect(splits[1].amount.toFixed(2)).toBe("5.00");
   });
 
   it("distributes remainder by cents (3 members, 10.00)", () => {
