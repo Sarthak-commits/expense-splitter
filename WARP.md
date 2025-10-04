@@ -87,5 +87,11 @@ Verification: Group Detail Page
 - Expected: group page shows Members, Recent expenses (possibly empty), and "Balances (coming soon)"
 - Non-members attempting to open the URL should receive a 404
 
+Verification: Navigation and Logout
+- Start dev: npm run dev
+- Header should show "Expense Splitter" and a Groups link
+- When signed out: links to Sign in and Create account are visible
+- When signed in: shows your name/email and a Log out button; clicking Log out returns to the home page
+
 References
 - README.md: Environment setup, CI example, and Vercel deployment notes
