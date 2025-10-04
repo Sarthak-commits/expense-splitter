@@ -72,6 +72,9 @@ High-level architecture
   - AuthZ: requester must be creator or member
   - Input: { description, amount, currency="USD" }
   - Behavior: creates Expense (paidBy = current user) and equal ExpenseSplits across all members
+- Balances (basic)
+  - Computation on server in group page: for each user, net = (sum paid) - (sum owed via ExpenseSplits) + (sent settlements) - (received settlements)
+  - Positive = user is owed; Negative = user owes
 - Data layer (Prisma)
   - Prisma Client singleton pattern in src/lib/db.ts prevents multiple clients in dev
   - Schema models (see prisma/schema.prisma): User, Group, GroupMember, Expense, ExpenseSplit, Settlement
@@ -101,6 +104,12 @@ Verification: Expense Display (pagination)
 - Open /groups/[id]
 - You should see up to 20 most recent expenses
 - If there are more, a "Load more" link appears; clicking it appends ?cursor=... and shows the next page
+
+Verification: Balances
+- Open /groups/[id]
+- For each member, the balance line should read one of: "settled", "is owed {amount}", or "owes {amount}"
+- Create an expense and confirm balances move as expected (payer increases; others decrease)
+- After recording settlements in the future, net balances should adjust accordingly
 
 Verification: Navigation and Logout
 - Start dev: npm run dev
