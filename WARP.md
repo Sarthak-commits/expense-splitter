@@ -63,6 +63,10 @@ High-level architecture
 - API routes
   - POST /api/auth/register: Validates input, ensures unique email, stores hashed password
   - GET/POST /api/groups: Requires session; lists groups for the user; creates a group and adds creator as OWNER
+- Group detail page
+  - Route: src/app/groups/[id]/page.tsx (server component)
+  - Access control: only creator or members can view; non-members 404
+  - Currently renders: group name, member list, recent expenses (last 10), placeholders for “Add expense” and “Balances”
 - Data layer (Prisma)
   - Prisma Client singleton pattern in src/lib/db.ts prevents multiple clients in dev
   - Schema models (see prisma/schema.prisma): User, Group, GroupMember, Expense, ExpenseSplit, Settlement
@@ -77,6 +81,11 @@ Operational tips
 Verification: Session Provider
 - Start dev: npm run dev
 - Register or sign in, then in a client component call useSession() to access session; signOut() should log you out
+
+Verification: Group Detail Page
+- Create a group at /groups, then click into the group link
+- Expected: group page shows Members, Recent expenses (possibly empty), and "Balances (coming soon)"
+- Non-members attempting to open the URL should receive a 404
 
 References
 - README.md: Environment setup, CI example, and Vercel deployment notes
