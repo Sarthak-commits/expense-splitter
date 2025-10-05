@@ -82,6 +82,10 @@ High-level architecture
   - GET /api/groups/[id]/settlement-suggestions: Enhanced algorithm returns optimized settlement suggestions with user details, summary statistics, and optional balance details (add ?details=true)
   - GET/POST /api/groups/[id]/settlements: Retrieve paginated settlements or create new settlement records with enhanced validation
   - GET/POST/PATCH/DELETE /api/groups/[id]/members: Comprehensive member management with role-based permissions
+  - GET/PATCH/DELETE /api/expenses/[expenseId]: Enhanced expense management with detailed permissions and split updates
+  - GET/POST /api/groups/[id]/invites: Enhanced invitation system with email notifications and expiration tracking
+  - POST /api/invites/accept: Enhanced invitation acceptance with notification emails and detailed responses
+  - GET/POST /api/groups/[id]/export: Comprehensive data export system with multiple formats and filtering options
 - Group detail page
   - Route: src/app/groups/[id]/page.tsx (server component)
   - Access control: only creator or members can view; non-members 404
@@ -138,6 +142,32 @@ High-level architecture
   - Role-based permissions: OWNER (creator), ADMIN (can manage members), MEMBER (basic access)
   - Prevents: Owner removal, owner role assignment (use transfer-ownership)
 
+- Expense Management (Enhanced)
+  - API: GET/PATCH/DELETE /api/expenses/[expenseId]
+  - GET: Retrieve expense details with split information and modification permissions
+  - PATCH: Update expense description, amount, currency, and split types with validation
+  - DELETE: Remove expenses with proper authorization (payer, group owner, or admin)
+  - Permissions: Enhanced hierarchy - payer, group owner, or group admin can modify
+  - Split updates: Supports EQUAL, EXACT split type changes with automatic recalculation
+  - Validation: Ensures split amounts sum to total, prevents unauthorized modifications
+
+- Email Integration (Complete)
+  - Service: Comprehensive email service with HTML templates and notification system
+  - Invitation emails: Professional templates with group details and accept links
+  - Notification emails: Acceptance confirmations and group activity updates
+  - API: Enhanced GET/POST /api/groups/[id]/invites with email sending
+  - API: Enhanced POST /api/invites/accept with notification emails
+  - Features: Email personalization, expiration tracking, invitation management
+  - Configuration: Supports multiple email providers (SendGrid, SMTP, etc.)
+
+- Data Export (Comprehensive)
+  - API: GET/POST /api/groups/[id]/export
+  - Formats: CSV export with multiple data types (expenses, settlements, members, balances)
+  - Export types: Individual exports or comprehensive group summary
+  - Features: Date filtering, custom configurations, proper CSV formatting
+  - Security: Member-level access control, secure file downloads
+  - Data integrity: Includes balance calculations and expense split details
+
 Operational tips
 - Ensure npm run prisma:generate is executed whenever the Prisma schema changes
 - For Postgres in production, follow README steps (update datasource provider and run migrations)
@@ -181,6 +211,26 @@ Verification: Member Management
 - Update member roles using the role management interface
 - Remove members (test permission hierarchy: owner > admin > member)
 - As non-owner: Verify limited permissions (cannot add/remove members unless admin)
+
+Verification: Enhanced Expense Management
+- Open /groups/[id] and view existing expenses
+- As expense payer: Edit expense details, amount, and split types
+- As group owner/admin: Modify any expense in the group
+- Test expense deletion with proper permission validation
+- Verify split recalculation when amounts change
+
+Verification: Email Integration
+- Create group invitations and verify invitation emails are sent
+- Accept invitations and confirm acceptance notification emails
+- Check email templates render properly with group and user details
+- Test invitation expiration and email personalization
+
+Verification: Data Export
+- Navigate to /groups/[id] export section
+- Test different export types: expenses, settlements, members, balances, summary
+- Verify CSV file downloads with proper formatting and data integrity
+- Test custom export configurations with date filtering
+- Confirm exported data matches group information accurately
 
 Verification: Navigation and Logout
 - Start dev: npm run dev
