@@ -143,7 +143,11 @@ export default async function GroupDetailPage({ params, searchParams }: { params
                 <div className="text-right space-y-1">
                   <div className="font-mono">{e.amount.toString()} {e.currency}</div>
                   {/* @ts-expect-error Server to Client boundary */}
-                  <ExpenseActions expenseId={e.id} canModify={group.createdById === userId || e.paidBy.id === userId} />
+                  <ExpenseActions 
+                    expenseId={e.id} 
+                    canModify={group.createdById === userId || e.paidBy.id === userId}
+                    members={group.members.map((m) => ({ id: m.user.id, name: m.user.name, email: m.user.email! }))}
+                  />
                 </div>
               </li>
             ))}
@@ -163,6 +167,7 @@ export default async function GroupDetailPage({ params, searchParams }: { params
           groupId={group.id}
           currentUserId={userId}
           members={group.members.map((m) => ({ id: m.user.id, name: m.user.name, email: m.user.email! }))}
+          balances={balances}
         />
         <ul className="space-y-1 mt-3">
           {balances.map(({ user, amount }) => {

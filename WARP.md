@@ -168,6 +168,25 @@ High-level architecture
   - Security: Member-level access control, secure file downloads
   - Data integrity: Includes balance calculations and expense split details
 
+- Frontend Components (Enhanced UI/UX)
+  - SettlementForm: Comprehensive settlement management with tabs
+    - Smart Suggestions: AI-optimized settlement recommendations with one-click recording
+    - Manual Recording: Custom settlement entry with validation and member selection
+    - History: Paginated settlement history with detailed transaction information
+    - Real-time balance updates and settlement tracking
+  - MemberManager: Complete member lifecycle management interface
+    - Member listing with roles, permissions, and join dates
+    - Invitation system with email integration and role assignment
+    - Role editing with permission validation (owner/admin hierarchy)
+    - Member removal with confirmation and permission checks
+    - Pending invitations management with status tracking
+  - ExpenseActions: Enhanced expense modification capabilities
+    - Inline editing with modal forms for comprehensive updates
+    - Split type switching (equal/custom) with real-time validation
+    - Custom amount allocation with sum validation
+    - Expense details viewing with complete split breakdown
+    - Permission-based action availability and confirmation dialogs
+
 Operational tips
 - Ensure npm run prisma:generate is executed whenever the Prisma schema changes
 - For Postgres in production, follow README steps (update datasource provider and run migrations)
@@ -231,6 +250,32 @@ Verification: Data Export
 - Verify CSV file downloads with proper formatting and data integrity
 - Test custom export configurations with date filtering
 - Confirm exported data matches group information accurately
+
+Verification: Enhanced Settlement UI
+- Open /groups/[id] and navigate to settlement section
+- Test Smart Suggestions tab: view optimized settlement recommendations
+- Test Record Manual tab: manually record settlements with validation
+- Test History tab: view past settlements with pagination
+- Verify settlement suggestions update after recording payments
+- Confirm balance updates reflect settlement recordings
+
+Verification: Enhanced Member Management UI
+- Navigate to member management section in /groups/[id]
+- Test Members tab: view current members with roles and permissions
+- Test invitation form: send invitations with role assignments and email options
+- Test role editing: update member roles (owner only functionality)
+- Test member removal: remove members with permission validation
+- Test Invitations tab: view pending invitations with status
+- Verify permission hierarchy works correctly (owner > admin > member)
+
+Verification: Enhanced Expense Actions UI
+- View expenses in /groups/[id] expense section
+- Test expense editing: modify description, amount, and split types
+- Test custom split editing: adjust individual member amounts
+- Test expense deletion with confirmation dialogs
+- Test expense details viewing for non-modifiable expenses
+- Verify permission validation (only payer, owner, or admin can modify)
+- Confirm split validation ensures amounts sum to total
 
 Verification: Navigation and Logout
 - Start dev: npm run dev
