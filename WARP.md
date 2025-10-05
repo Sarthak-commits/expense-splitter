@@ -79,7 +79,9 @@ High-level architecture
   - POST /api/groups/[id]/transfer-ownership: Owner moves ownership to another member
   - POST /api/groups/[id]/invites: Owner creates invite for an email (returns token)
   - POST /api/invites/accept: Authenticated user with matching email accepts invite token
-  - GET /api/groups/[id]/settlement-suggestions: Returns a list of suggested transfers to settle balances
+  - GET /api/groups/[id]/settlement-suggestions: Enhanced algorithm returns optimized settlement suggestions with user details, summary statistics, and optional balance details (add ?details=true)
+  - GET/POST /api/groups/[id]/settlements: Retrieve paginated settlements or create new settlement records with enhanced validation
+  - GET/POST/PATCH/DELETE /api/groups/[id]/members: Comprehensive member management with role-based permissions
 - Group detail page
   - Route: src/app/groups/[id]/page.tsx (server component)
   - Access control: only creator or members can view; non-members 404
@@ -111,6 +113,31 @@ High-level architecture
   - Permissions: only payer or group owner can modify/delete an expense
   - PATCH supports updating description, currency, and amount; can also switch to EXACT or PERCENT splits with provided data
 
+- Settlement Management (Enhanced)
+  - API: GET/POST /api/groups/[id]/settlements
+  - GET: Retrieve paginated settlement history with user details (supports ?limit=N&cursor=ID)
+  - POST: Record new settlement with validation (only payer or group owner can record)
+  - Input: { fromUserId, toUserId, amount }
+  - Returns: Settlement details with user information and creation timestamp
+  - Enhanced validation: Prevents self-settlements, validates group membership, enforces permissions
+
+- Settlement Suggestions (Enhanced)
+  - API: GET /api/groups/[id]/settlement-suggestions
+  - Advanced debt optimization algorithm minimizes transaction count
+  - Returns: Optimized settlement suggestions with user names/emails
+  - Query params: ?details=true includes comprehensive balance breakdown
+  - Summary statistics: total debt, transaction count, creditor/debtor counts
+  - Supports complex multi-party debt resolution
+
+- Member Management (Comprehensive)
+  - API: GET/POST/PATCH/DELETE /api/groups/[id]/members
+  - GET: List all members with roles, join dates, and user details
+  - POST: Add member by email with role assignment (OWNER/ADMIN can add, OWNER can assign ADMIN)
+  - PATCH: Update member roles (OWNER only, cannot assign OWNER role)
+  - DELETE: Remove members with hierarchical permissions (OWNER > ADMIN > MEMBER, self-removal allowed)
+  - Role-based permissions: OWNER (creator), ADMIN (can manage members), MEMBER (basic access)
+  - Prevents: Owner removal, owner role assignment (use transfer-ownership)
+
 Operational tips
 - Ensure npm run prisma:generate is executed whenever the Prisma schema changes
 - For Postgres in production, follow README steps (update datasource provider and run migrations)
@@ -140,6 +167,20 @@ Verification: Balances
 - For each member, the balance line should read one of: "settled", "is owed {amount}", or "owes {amount}"
 - Create an expense and confirm balances move as expected (payer increases; others decrease)
 - After recording settlements in the future, net balances should adjust accordingly
+
+Verification: Settlement Management
+- Open /groups/[id] and navigate to settlements section
+- Record a settlement between members using the settlement form
+- Expected: Settlement appears in history with user details and timestamp
+- Balances should update to reflect the settlement
+- Test settlement suggestions to see optimized payment recommendations
+
+Verification: Member Management
+- Open /groups/[id] and navigate to members section
+- As group owner: Add members by email, assign roles (ADMIN/MEMBER)
+- Update member roles using the role management interface
+- Remove members (test permission hierarchy: owner > admin > member)
+- As non-owner: Verify limited permissions (cannot add/remove members unless admin)
 
 Verification: Navigation and Logout
 - Start dev: npm run dev
