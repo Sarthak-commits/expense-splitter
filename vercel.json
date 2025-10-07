@@ -7,17 +7,5 @@
     "src/app/**/*.ts": {
       "maxDuration": 30
     }
-  },
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "NEXTAUTH_URL": "@nextauth_url", 
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "EMAIL_FROM": "@email_from",
-    "SENDGRID_API_KEY": "@sendgrid_api_key"
-  },
-  "build": {
-    "env": {
-      "DATABASE_URL": "@database_url"
-    }
   }
 }
