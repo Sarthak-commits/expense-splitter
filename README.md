@@ -83,8 +83,30 @@ jobs:
 - Set env vars: DATABASE_URL, NEXTAUTH_URL, NEXTAUTH_SECRET
 - If using Postgres, ensure migrations are applied in prod.
 
+## Production Deployment
+
+### Quick Deploy to Vercel
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Sarthak-commits/expense-splitter)
+
+### Manual Deployment
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
+
+**Requirements for Production:**
+- PostgreSQL database (Supabase, Neon, Railway, etc.)
+- Vercel account (free tier works)
+- Environment variables configured
+
+**Quick Setup:**
+1. Fork this repository
+2. Create PostgreSQL database on Supabase
+3. Deploy to Vercel with environment variables
+4. Run database migrations
+5. Your app is live! 🚀
+
 ## Roadmap
-- Add members to groups (invites)
-- Add expenses and compute balances
-- Record settlements and show net owed/owes
-- CSV export and email summaries
+- ✅ Add members to groups (invites)
+- ✅ Add expenses and compute balances  
+- ✅ Record settlements and show net owed/owes
+- ✅ CSV export and email summaries
+- ✅ Mobile-responsive design
+- ✅ Production deployment ready

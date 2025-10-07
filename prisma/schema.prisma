@@ -1,12 +1,12 @@
-// Prisma schema for Expense Splitter (SQLite for local dev)
-// Switch to Postgres for production later by updating the datasource.
+// Prisma schema for Expense Splitter
+// Uses PostgreSQL for production, SQLite for local development
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

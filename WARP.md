@@ -244,6 +244,24 @@ Operational tips
 - For Postgres in production, follow README steps (update datasource provider and run migrations)
 - Build process now stable with Tailwind CSS v3 - all components and mobile responsiveness verified
 
+Production Deployment Setup (October 7, 2025)
+- Database: Migrated schema from SQLite to PostgreSQL for production scalability
+- Platform: Configured for Vercel deployment with automatic builds and serverless functions
+- Environment: Set up production environment variables and configuration files
+- Technical decisions:
+  - PostgreSQL chosen for production due to advanced features and scalability
+  - Vercel selected for deployment due to excellent Next.js integration and serverless architecture
+  - Created comprehensive deployment guide and automation scripts
+  - Separated development (.env.development) and production (.env.production.example) configurations
+- Implementation:
+  - Updated Prisma schema to use PostgreSQL provider
+  - Created vercel.json with optimized build configuration
+  - Added database deployment script (scripts/deploy-database.js)
+  - Created DEPLOYMENT.md with step-by-step production setup guide
+  - Added Vercel "Deploy" button to README for one-click deployments
+- Result: ✅ Application ready for production deployment with comprehensive setup documentation
+- Next steps: Follow DEPLOYMENT.md to deploy to Vercel with PostgreSQL database
+
 Verification: Session Provider
 - Start dev: npm run dev
 - Register or sign in, then in a client component call useSession() to access session; signOut() should log you out
@@ -372,6 +390,21 @@ Verification: Build Environment and Development Server
 - Expected: ✅ Development server starts on http://localhost:3000
 - Expected: All Tailwind CSS classes render correctly (gradients, responsive breakpoints, etc.)
 - Expected: Mobile-responsive components maintain proper styling
+
+Verification: Production Deployment
+- Follow DEPLOYMENT.md guide to deploy to Vercel
+- Set up PostgreSQL database (Supabase recommended)
+- Configure environment variables in Vercel dashboard:
+  - DATABASE_URL (PostgreSQL connection string)
+  - NEXTAUTH_URL (your Vercel app URL)
+  - NEXTAUTH_SECRET (32+ character secret)
+  - EMAIL_FROM and SENDGRID_API_KEY (optional)
+- Run database migration: npm run prisma:deploy
+- Expected: ✅ Successful deployment with working authentication and database
+- Expected: ✅ All features work in production (registration, groups, expenses, settlements)
+- Expected: ✅ Mobile responsiveness maintained in production
+- Expected: ✅ Email invitations work (if configured)
+- Production URL: https://your-app.vercel.app
 
 Verification: Navigation and Logout
 - Start dev: npm run dev
