@@ -86,10 +86,13 @@ High-level architecture
   - GET/POST /api/groups/[id]/invites: Enhanced invitation system with email notifications and expiration tracking
   - POST /api/invites/accept: Enhanced invitation acceptance with notification emails and detailed responses
   - GET/POST /api/groups/[id]/export: Comprehensive data export system with multiple formats and filtering options
-- Group detail page
+- Group detail page (Enhanced with Mobile Responsiveness)
   - Route: src/app/groups/[id]/page.tsx (server component)
   - Access control: only creator or members can view; non-members 404
-  - Renders: group name, member list, recent expenses (last 10), and an "Add expense" form (equal split) plus a Balances placeholder
+  - Enhanced Layout: Mobile-first responsive design with optimized sections
+  - Components: BalanceDisplay (new), ExpenseList (new), MemberManager, SettlementForm
+  - Features: Advanced expense pagination, smart settlement suggestions, comprehensive member management
+  - Mobile optimizations: Touch-friendly interactions, responsive grid layouts, optimized text scaling
 - Expense creation
   - API: POST /api/groups/[id]/expenses
   - AuthZ: requester must be creator or member
@@ -168,24 +171,58 @@ High-level architecture
   - Security: Member-level access control, secure file downloads
   - Data integrity: Includes balance calculations and expense split details
 
-- Frontend Components (Enhanced UI/UX)
-  - SettlementForm: Comprehensive settlement management with tabs
+- Frontend Components (Enhanced UI/UX with Mobile-First Design)
+  - BalanceDisplay (NEW): Comprehensive balance overview with settlement integration
+    - Balance summary with statistics (members, settled count, outstanding amounts)
+    - Smart settlement suggestions with one-click recording capability
+    - Individual balance cards with visual indicators and user status
+    - Mobile-optimized responsive design with touch-friendly interactions
+    - Loading states, success/error messages, and balance explanations
+  - ExpenseList (NEW): Advanced expense management with enhanced UX
+    - Search functionality across descriptions, payers, and amounts (debounced)
+    - Multiple filter options (All, My expenses, Others' expenses)
+    - Sorting by date, amount, or description with instant feedback
+    - Load more pagination with loading states and progress indicators
+    - Client-side filtering/sorting for better performance
+    - Mobile-responsive cards with stacked layout for small screens
+  - SettlementForm (Enhanced): Comprehensive settlement management with tabs
     - Smart Suggestions: AI-optimized settlement recommendations with one-click recording
     - Manual Recording: Custom settlement entry with validation and member selection
     - History: Paginated settlement history with detailed transaction information
     - Real-time balance updates and settlement tracking
-  - MemberManager: Complete member lifecycle management interface
+    - Mobile-responsive tabbed interface with touch-friendly controls
+  - MemberManager (Enhanced): Complete member lifecycle management interface
     - Member listing with roles, permissions, and join dates
     - Invitation system with email integration and role assignment
     - Role editing with permission validation (owner/admin hierarchy)
     - Member removal with confirmation and permission checks
     - Pending invitations management with status tracking
-  - ExpenseActions: Enhanced expense modification capabilities
+    - Mobile-optimized layout with responsive member cards
+  - ExpenseActions (Enhanced): Enhanced expense modification capabilities
     - Inline editing with modal forms for comprehensive updates
     - Split type switching (equal/custom) with real-time validation
     - Custom amount allocation with sum validation
     - Expense details viewing with complete split breakdown
     - Permission-based action availability and confirmation dialogs
+    - Mobile-friendly action buttons with proper touch targets
+
+- Mobile Responsive Design System
+  - Breakpoints: Consistent system (sm: 640px, md: 768px, lg: 1024px+)
+  - Mobile-First Approach: Progressive enhancement from mobile to desktop
+  - Touch-Friendly Interface: 44px minimum touch targets, touch-manipulation optimization
+  - Responsive Typography: Adaptive text sizing (text-sm → text-base, text-lg → text-xl)
+  - Grid Systems: Adaptive layouts (1 col mobile → 2-3 cols desktop)
+  - Component Patterns:
+    - Stacked layouts on mobile, side-by-side on desktop
+    - Full-width buttons on mobile, auto-width on desktop
+    - Compact padding on mobile (p-3), standard on desktop (p-4)
+    - Simplified text/icons on mobile, full labels on desktop
+    - Proper text truncation and overflow handling
+    - Responsive spacing and margin adjustments
+  - Performance Optimizations:
+    - Client-side filtering/sorting for instant feedback
+    - Debounced search to reduce API calls
+    - Optimized component rendering and state management
 
 Operational tips
 - Ensure npm run prisma:generate is executed whenever the Prisma schema changes
@@ -195,9 +232,14 @@ Verification: Session Provider
 - Start dev: npm run dev
 - Register or sign in, then in a client component call useSession() to access session; signOut() should log you out
 
-Verification: Group Detail Page
+Verification: Group Detail Page (Enhanced with New Components)
 - Create a group at /groups, then click into the group link
-- Expected: group page shows Members, an Add expense form, Recent expenses (possibly empty), and "Balances (coming soon)"
+- Expected: Enhanced mobile-responsive page with:
+  - BalanceDisplay: Balance summary, settlement suggestions, individual balance cards
+  - ExpenseList: Advanced expense list with search, filters, and pagination
+  - MemberManager: Comprehensive member management interface
+  - Add expense form and settlement recording form
+- Test mobile responsiveness by resizing browser or using mobile device
 - Non-members attempting to open the URL should receive a 404
 
 Verification: Expense Creation (Equal/Custom)
@@ -276,6 +318,35 @@ Verification: Enhanced Expense Actions UI
 - Test expense details viewing for non-modifiable expenses
 - Verify permission validation (only payer, owner, or admin can modify)
 - Confirm split validation ensures amounts sum to total
+- Test mobile responsiveness: touch-friendly buttons, responsive layouts
+
+Verification: New BalanceDisplay Component
+- Open /groups/[id] and view the enhanced balance display section
+- Test balance summary statistics (members, settled, outstanding)
+- Test smart settlement suggestions with one-click recording
+- Verify individual balance cards show correct amounts and status
+- Test mobile responsiveness: responsive grids, proper text sizing
+- Confirm loading states and error/success messages work correctly
+- Test settlement suggestion recording and balance updates
+
+Verification: New ExpenseList Component
+- Navigate to expenses section in /groups/[id]
+- Test search functionality: search by description, payer, amount
+- Test filter options: All, My expenses, Others' expenses
+- Test sorting: by date, amount, description
+- Test load more pagination with proper loading states
+- Verify results summary and clear filters functionality
+- Test mobile responsiveness: stacked cards, full-width buttons
+- Confirm client-side filtering provides instant feedback
+
+Verification: Mobile Responsive Design
+- Test all components on mobile device or browser resize
+- Verify touch-friendly interactions (44px minimum touch targets)
+- Test responsive breakpoints: mobile (< 640px), tablet (640-1024px), desktop (1024px+)
+- Confirm text scaling and spacing adapt properly across screen sizes
+- Test grid layouts adapt from 1 column to 2-3 columns
+- Verify buttons become full-width on mobile, auto-width on desktop
+- Test text truncation and overflow handling on small screens
 
 Verification: Navigation and Logout
 - Start dev: npm run dev

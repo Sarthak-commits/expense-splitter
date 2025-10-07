@@ -7,6 +7,8 @@ import ExpenseForm from "@/components/ExpenseForm";
 import MemberManager from "@/components/MemberManager";
 import SettlementForm from "@/components/SettlementForm";
 import ExpenseActions from "@/components/ExpenseActions";
+import BalanceDisplay from "@/components/BalanceDisplay";
+import ExpenseList from "@/components/ExpenseList";
 import { Prisma } from "@prisma/client";
 import { computeBalances } from "@/lib/balances";
 
@@ -90,23 +92,44 @@ export default async function GroupDetailPage({ params, searchParams }: { params
   });
 
   return (
-    <div className="max-w-3xl mx-auto p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{group.name}</h1>
-        <Link href="/groups" className="underline">Back to groups</Link>
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* Header - Mobile Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 truncate">{group.name}</h1>
+        <Link 
+          href="/groups" 
+          className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+        >
+          ← Back to groups
+        </Link>
       </div>
 
       <section>
-        <h2 className="text-lg font-medium mb-2">Members</h2>
-        <ul className="space-y-1">
+        <h2 className="text-lg font-medium mb-4">👥 Members</h2>
+        
+        {/* Mobile-friendly member list */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
           {group.members.map((m) => (
-            <li key={m.user.id} className="text-sm">
-              <span className="font-medium">{m.user.name || m.user.email}</span>
-              <span className="text-gray-600"> — {m.role}</span>
-            </li>
+            <div key={m.user.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium text-blue-600">
+                {(m.user.name || m.user.email)[0].toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 truncate">
+                  {m.user.name || m.user.email}
+                </p>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-gray-600">{m.user.email}</span>
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    {m.role}
+                  </span>
+                </div>
+              </div>
+            </div>
           ))}
-        </ul>
-        {/* Owner controls */}
+        </div>
+        
+        {/* Member Management */}
         {/* @ts-expect-error Server to Client boundary */}
         <MemberManager
           groupId={group.id}
@@ -122,70 +145,53 @@ export default async function GroupDetailPage({ params, searchParams }: { params
       </section>
 
       <section>
-        <h2 className="text-lg font-medium mb-2">Add expense</h2>
-        {/* client-side form */}
-        {/* @ts-expect-error Server Component to Client Component boundary */}
-        <ExpenseForm groupId={group.id} members={group.members.map((m) => ({ id: m.user.id, name: m.user.name, email: m.user.email! }))} />
+        <h2 className="text-lg font-medium mb-4">➕ Add New Expense</h2>
+        <div className="bg-gray-50 rounded-lg p-4">
+          {/* @ts-expect-error Server Component to Client Component boundary */}
+          <ExpenseForm 
+            groupId={group.id} 
+            members={group.members.map((m) => ({ id: m.user.id, name: m.user.name, email: m.user.email! }))} 
+          />
+        </div>
       </section>
 
       <section>
-        <h2 className="text-lg font-medium mb-2">Expenses</h2>
-        {expenses.length === 0 ? (
-          <p className="text-sm text-gray-600">No expenses yet. Add one to get started.</p>
-        ) : (
-          <ul className="divide-y border rounded">
-            {expenses.map((e) => (
-              <li key={e.id} className="p-3 text-sm flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{e.description}</div>
-                  <div className="text-gray-600">Paid by {e.paidBy.name || e.paidBy.email}</div>
-                </div>
-                <div className="text-right space-y-1">
-                  <div className="font-mono">{e.amount.toString()} {e.currency}</div>
-                  {/* @ts-expect-error Server to Client boundary */}
-                  <ExpenseActions 
-                    expenseId={e.id} 
-                    canModify={group.createdById === userId || e.paidBy.id === userId}
-                    members={group.members.map((m) => ({ id: m.user.id, name: m.user.name, email: m.user.email! }))}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        {hasMore && nextCursor && (
-          <div className="mt-3">
-            <Link href={`/groups/${group.id}?cursor=${nextCursor}`} className="underline">Load more</Link>
-          </div>
-        )}
-      </section>
-
-      <section>
-        <h2 className="text-lg font-medium mb-2">Balances</h2>
+        <h2 className="text-lg font-medium mb-4">💸 Expenses</h2>
         {/* @ts-expect-error Server to Client boundary */}
-        <SettlementForm
+        <ExpenseList
           groupId={group.id}
+          initialExpenses={expenses}
+          hasMore={hasMore}
+          nextCursor={nextCursor}
           currentUserId={userId}
+          groupCreatorId={group.createdById}
           members={group.members.map((m) => ({ id: m.user.id, name: m.user.name, email: m.user.email! }))}
-          balances={balances}
         />
-        <ul className="space-y-1 mt-3">
-          {balances.map(({ user, amount }) => {
-            const n = parseFloat(amount.toString());
-            const label = Math.abs(n) < 0.01
-              ? "settled"
-              : n > 0
-              ? `is owed ${amount.toFixed(2)}`
-              : `owes ${(amount.abs()).toFixed(2)}`;
-            return (
-              <li key={user.id} className="text-sm">
-                <span className="font-medium">{user.name || user.email}</span>
-                <span className="text-gray-700"> — {label}</span>
-              </li>
-            );
-          })}
-        </ul>
-        <p className="text-xs text-gray-500 mt-2">Positive balances mean the user is owed money; negative means the user owes.</p>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-medium mb-4">💰 Balances & Settlements</h2>
+        {/* @ts-expect-error Server to Client boundary */}
+        <BalanceDisplay
+          groupId={group.id}
+          balances={balances}
+          currentUserId={userId}
+          onSettlementRecorded={() => {
+            // This would ideally trigger a refresh, but for now we'll rely on manual refresh
+            // In a real app, you might want to use a state management solution
+          }}
+        />
+        
+        <div className="mt-6">
+          <h3 className="text-md font-medium mb-3">⚙️ Manual Settlement Recording</h3>
+          {/* @ts-expect-error Server to Client boundary */}
+          <SettlementForm
+            groupId={group.id}
+            currentUserId={userId}
+            members={group.members.map((m) => ({ id: m.user.id, name: m.user.name, email: m.user.email! }))}
+            balances={balances}
+          />
+        </div>
       </section>
     </div>
   );
