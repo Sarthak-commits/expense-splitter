@@ -48,6 +48,7 @@ async function main() {
       currency: "USD",
       description: "Dinner",
       splitType: "EQUAL",
+      category: "FOOD",
     },
   });
 

@@ -66,20 +66,40 @@ enum SplitType {
   PERCENT
 }
 
+enum ExpenseCategory {
+  FOOD
+  TRAVEL
+  UTILITIES
+  ENTERTAINMENT
+  GROCERIES
+  TRANSPORTATION
+  HOUSING
+  HEALTH
+  EDUCATION
+  SHOPPING
+  GIFTS
+  FEES
+  OTHER
+}
+
 model Expense {
-  id          String    @id @default(cuid())
+  id          String           @id @default(cuid())
   groupId     String
   paidById    String
   amount      Decimal
-  currency    String    @default("USD")
+  currency    String           @default("USD")
   description String
-  date        DateTime  @default(now())
-  splitType   SplitType @default(EQUAL)
-  createdAt   DateTime  @default(now())
+  date        DateTime         @default(now())
+  splitType   SplitType        @default(EQUAL)
+  category    ExpenseCategory  @default(OTHER)
+  createdAt   DateTime         @default(now())
 
   group   Group @relation(fields: [groupId], references: [id])
   paidBy  User  @relation("ExpensePayer", fields: [paidById], references: [id])
   splits  ExpenseSplit[]
+
+  @@index([groupId, date])
+  @@index([groupId, category])
 }
 
 model ExpenseSplit {
