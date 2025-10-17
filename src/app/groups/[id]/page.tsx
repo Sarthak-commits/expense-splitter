@@ -64,7 +64,13 @@ export default async function GroupDetailPage({ params, searchParams }: { params
   });
 
   const hasMore = expensesQ.length > PAGE_SIZE;
-  const expenses = hasMore ? expensesQ.slice(0, PAGE_SIZE) : expensesQ;
+  const expensesRaw = hasMore ? expensesQ.slice(0, PAGE_SIZE) : expensesQ;
+  const expenses = expensesRaw.map((e) => ({
+    ...e,
+    amount: e.amount.toString(),
+    date: e.date instanceof Date ? e.date.toISOString() : (e.date as any),
+    createdAt: e.createdAt instanceof Date ? e.createdAt.toISOString() : (e.createdAt as any),
+  }));
   const nextCursor = hasMore ? expenses[expenses.length - 1]?.id : undefined;
 
   // Compute basic balances for all members: paid - owed, adjusted by settlements
@@ -130,7 +136,6 @@ export default async function GroupDetailPage({ params, searchParams }: { params
         </div>
         
         {/* Member Management */}
-        {/* @ts-expect-error Server to Client boundary */}
         <MemberManager
           groupId={group.id}
           ownerUserId={group.createdById}
@@ -147,7 +152,6 @@ export default async function GroupDetailPage({ params, searchParams }: { params
       <section>
         <h2 className="text-lg font-medium mb-4">➕ Add New Expense</h2>
         <div className="bg-gray-50 rounded-lg p-4">
-          {/* @ts-expect-error Server Component to Client Component boundary */}
           <ExpenseForm 
             groupId={group.id} 
             members={group.members.map((m) => ({ id: m.user.id, name: m.user.name, email: m.user.email! }))} 
@@ -157,7 +161,6 @@ export default async function GroupDetailPage({ params, searchParams }: { params
 
       <section>
         <h2 className="text-lg font-medium mb-4">💸 Expenses</h2>
-        {/* @ts-expect-error Server to Client boundary */}
         <ExpenseList
           groupId={group.id}
           initialExpenses={expenses}
@@ -171,7 +174,6 @@ export default async function GroupDetailPage({ params, searchParams }: { params
 
       <section>
         <h2 className="text-lg font-medium mb-4">💰 Balances & Settlements</h2>
-        {/* @ts-expect-error Server to Client boundary */}
         <BalanceDisplay
           groupId={group.id}
           balances={balances}
@@ -184,7 +186,6 @@ export default async function GroupDetailPage({ params, searchParams }: { params
         
         <div className="mt-6">
           <h3 className="text-md font-medium mb-3">⚙️ Manual Settlement Recording</h3>
-          {/* @ts-expect-error Server to Client boundary */}
           <SettlementForm
             groupId={group.id}
             currentUserId={userId}

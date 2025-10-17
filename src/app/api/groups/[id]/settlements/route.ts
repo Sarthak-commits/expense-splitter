@@ -29,7 +29,7 @@ export async function POST(
 
   let decimalAmount: Prisma.Decimal;
   try {
-    const asString = typeof amount === "number" ? amount.toString() : amount;
+    const asString = String(amount);
     decimalAmount = new Prisma.Decimal(asString);
     if (decimalAmount.lte(0)) throw new Error("non-positive");
   } catch {

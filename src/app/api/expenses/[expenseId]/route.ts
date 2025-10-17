@@ -31,6 +31,7 @@ async function canModify(expenseId: string, userId: string) {
       splitType: true,
       group: { 
         select: { 
+          id: true,
           createdById: true,
           name: true,
           members: {
@@ -96,7 +97,7 @@ export async function GET(
 
   // Allow viewing if user is a group member (even if they can't modify)
   const isMember = await prisma.groupMember.findFirst({
-    where: { groupId: expense.group.id, userId },
+    where: { groupId: expense.groupId, userId },
     select: { id: true }
   });
   
