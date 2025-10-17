@@ -23,6 +23,15 @@ export const amountInputSchema = z
     }
   }, { message: "Amount must be greater than 0" });
 
+// Expense categories (must match Prisma enum values)
+export const expenseCategorySchema = z
+  .string()
+  .transform((s) => s.trim().toUpperCase())
+  .refine((s) => [
+    "FOOD","TRAVEL","UTILITIES","ENTERTAINMENT","GROCERIES","TRANSPORTATION",
+    "HOUSING","HEALTH","EDUCATION","SHOPPING","GIFTS","FEES","OTHER",
+  ].includes(s), { message: "Invalid category" });
+
 export const registerSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(100),
@@ -42,6 +51,7 @@ export const expenseCreateSchema = z.object({
   description: z.string().min(1).max(200),
   amount: amountInputSchema,
   currency: currencySchema.default("USD"),
+  category: expenseCategorySchema.optional().default("OTHER"),
 });
 
 export const settlementCreateSchema = z.object({

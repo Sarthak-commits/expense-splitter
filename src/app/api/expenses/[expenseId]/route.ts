@@ -12,6 +12,7 @@ const expenseUpdateSchema = z.object({
   amount: z.union([z.string(), z.number()]).optional(),
   currency: z.string().optional(),
   splitType: z.enum(["EQUAL", "EXACT", "PERCENT"]).optional(),
+  category: z.string().optional(),
   splits: z.array(z.object({
     userId: z.string(),
     amount: z.union([z.string(), z.number()]),
@@ -29,6 +30,7 @@ async function canModify(expenseId: string, userId: string) {
       description: true,
       date: true,
       splitType: true,
+      category: true,
       group: { 
         select: { 
           id: true,
@@ -122,6 +124,7 @@ export async function GET(
       group: {
         name: expense.group.name
       },
+      category: expense.category,
       canModify: allow,
       modifyReason: reason
     }
@@ -201,6 +204,7 @@ export async function PATCH(
   if (parsed.data.description !== undefined) toUpdate.description = parsed.data.description;
   if (parsed.data.currency !== undefined) toUpdate.currency = parsed.data.currency;
   if (parsed.data.splitType !== undefined) toUpdate.splitType = parsed.data.splitType;
+  if (parsed.data.category !== undefined) toUpdate.category = String(parsed.data.category).toUpperCase();
 
   let decimalAmount: Prisma.Decimal | undefined;
   if (parsed.data.amount !== undefined) {
@@ -297,6 +301,7 @@ export async function PATCH(
         amount: completeExpense!.amount.toString(),
         currency: completeExpense!.currency,
         splitType: completeExpense!.splitType,
+        category: completeExpense!.category,
         date: completeExpense!.date,
         paidBy: completeExpense!.paidBy,
         group: completeExpense!.group,

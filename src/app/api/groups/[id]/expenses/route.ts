@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { Prisma } from "@prisma/client";
+import { Prisma, ExpenseCategory } from "@prisma/client";
 import { expenseCreateSchema } from "@/lib/schemas";
 import { computeEqualSplits, computePercentSplits } from "@/lib/split";
 
@@ -20,7 +20,7 @@ export async function POST(
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-  const { description, amount, currency, splitType, splits } = parsed.data as any;
+  const { description, amount, currency, splitType, splits, category } = parsed.data as any;
 
   // parse amount safely into Decimal
   let decimalAmount: Prisma.Decimal;
@@ -120,6 +120,7 @@ export async function POST(
           currency,
           description,
           splitType: (splitType === "EXACT" || splitType === "PERCENT") ? splitType : "EQUAL",
+          category: (category ? String(category).toUpperCase() as ExpenseCategory : "OTHER" as ExpenseCategory),
         },
         select: { id: true },
       });
