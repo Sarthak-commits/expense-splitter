@@ -4,6 +4,29 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ExpenseActions from "./ExpenseActions";
 
+// Expense categories with display labels and icons (matching ExpenseForm)
+const EXPENSE_CATEGORIES = [
+  { value: "FOOD", label: "🍽️ Food", shortLabel: "Food" },
+  { value: "GROCERIES", label: "🛒 Groceries", shortLabel: "Groceries" },
+  { value: "TRAVEL", label: "✈️ Travel", shortLabel: "Travel" },
+  { value: "TRANSPORTATION", label: "🚗 Transport", shortLabel: "Transport" },
+  { value: "ENTERTAINMENT", label: "🎬 Entertainment", shortLabel: "Entertainment" },
+  { value: "SHOPPING", label: "🛍️ Shopping", shortLabel: "Shopping" },
+  { value: "UTILITIES", label: "💡 Utilities", shortLabel: "Utilities" },
+  { value: "HOUSING", label: "🏠 Housing", shortLabel: "Housing" },
+  { value: "HEALTH", label: "🏥 Healthcare", shortLabel: "Health" },
+  { value: "EDUCATION", label: "📚 Education", shortLabel: "Education" },
+  { value: "GIFTS", label: "🎁 Gifts", shortLabel: "Gifts" },
+  { value: "FEES", label: "📋 Fees", shortLabel: "Fees" },
+  { value: "OTHER", label: "📦 Other", shortLabel: "Other" },
+];
+
+// Helper function to get category display info
+function getCategoryInfo(category: string) {
+  const cat = EXPENSE_CATEGORIES.find(c => c.value === category);
+  return cat || { value: "OTHER", label: "📦 Other", shortLabel: "Other" };
+}
+
 interface Expense {
   id: string;
   description: string;
@@ -11,6 +34,7 @@ interface Expense {
   currency: string;
   date: string;
   createdAt: string;
+  category: string; // ExpenseCategory from Prisma
   paidBy: {
     id: string;
     name: string | null;
@@ -49,6 +73,7 @@ export default function ExpenseList({
     (searchParams.get('sort') as 'date' | 'amount' | 'description') || 'date'
   );
   const [filterBy, setFilterBy] = useState(searchParams.get('filter') || 'all');
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'all');
   const [error, setError] = useState<string | null>(null);
 
   // Debounced search function
@@ -61,7 +86,7 @@ export default function ExpenseList({
   );
 
   // Update URL with search params
-  function updateURL(params: { search?: string; sort?: string; filter?: string; cursor?: string }) {
+  function updateURL(params: { search?: string; sort?: string; filter?: string; category?: string; cursor?: string }) {
     const url = new URL(window.location.href);
     
     Object.entries(params).forEach(([key, value]) => {
@@ -85,6 +110,7 @@ export default function ExpenseList({
       if (search) params.set('search', search);
       if (sortBy !== 'date') params.set('sort', sortBy);
       if (filterBy !== 'all') params.set('filter', filterBy);
+      if (categoryFilter !== 'all') params.set('category', categoryFilter);
       if (!reset && nextCursor) params.set('cursor', nextCursor);
       
       const url = `/api/groups/${groupId}/expenses?${params.toString()}`;
@@ -118,9 +144,9 @@ export default function ExpenseList({
 
   // Handle filter/sort changes
   useEffect(() => {
-    updateURL({ sort: sortBy, filter: filterBy, cursor: undefined });
+    updateURL({ sort: sortBy, filter: filterBy, category: categoryFilter, cursor: undefined });
     loadExpenses(true);
-  }, [sortBy, filterBy]);
+  }, [sortBy, filterBy, categoryFilter]);
 
   // Filter expenses client-side for immediate feedback
   const filteredExpenses = expenses.filter(expense => {
@@ -130,10 +156,17 @@ export default function ExpenseList({
       const matchesDescription = expense.description.toLowerCase().includes(searchLower);
       const matchesPayer = (expense.paidBy.name?.toLowerCase() || expense.paidBy.email.toLowerCase()).includes(searchLower);
       const matchesAmount = expense.amount.toString().includes(searchTerm);
+      const categoryInfo = getCategoryInfo(expense.category || 'OTHER');
+      const matchesCategory = categoryInfo.shortLabel.toLowerCase().includes(searchLower);
       
-      if (!matchesDescription && !matchesPayer && !matchesAmount) {
+      if (!matchesDescription && !matchesPayer && !matchesAmount && !matchesCategory) {
         return false;
       }
+    }
+
+    // Category filter
+    if (categoryFilter !== 'all' && expense.category !== categoryFilter) {
+      return false;
     }
 
     // User filter
@@ -189,8 +222,8 @@ export default function ExpenseList({
           </div>
         </div>
         
-        {/* Sort and Filter - Side by Side on Mobile */}
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:gap-4">
+        {/* Sort, Filter, and Category - Responsive Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Sort Options */}
           <div className="flex-1">
             <label className="block text-xs font-medium text-gray-700 mb-1">Sort</label>
@@ -205,7 +238,7 @@ export default function ExpenseList({
             </select>
           </div>
 
-          {/* Filter Options */}
+          {/* User Filter Options */}
           <div className="flex-1">
             <label className="block text-xs font-medium text-gray-700 mb-1">Filter</label>
             <select
@@ -218,6 +251,32 @@ export default function ExpenseList({
               <option value="others-expenses">👥 Others</option>
             </select>
           </div>
+
+          {/* Category Filter */}
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
+            <div className="relative">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full border rounded-md px-3 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">🏷️ All Categories</option>
+                {EXPENSE_CATEGORIES.map((cat) => (
+                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                ))}
+              </select>
+              {categoryFilter !== 'all' && (
+                <button
+                  onClick={() => setCategoryFilter('all')}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 touch-manipulation"
+                  title="Clear category filter"
+                >
+                  ✖️
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Results Summary */}
@@ -225,13 +284,15 @@ export default function ExpenseList({
           <span>
             Showing {sortedExpenses.length} of {expenses.length} expenses
             {searchTerm && ` matching "${searchTerm}"`}
+            {categoryFilter !== 'all' && ` in ${getCategoryInfo(categoryFilter).shortLabel}`}
           </span>
-          {(searchTerm || filterBy !== 'all' || sortBy !== 'date') && (
+          {(searchTerm || filterBy !== 'all' || categoryFilter !== 'all' || sortBy !== 'date') && (
             <button
               onClick={() => {
                 setSearchTerm('');
                 setSortBy('date');
                 setFilterBy('all');
+                setCategoryFilter('all');
                 updateURL({});
                 loadExpenses(true, '');
               }}
@@ -254,16 +315,17 @@ export default function ExpenseList({
       {sortedExpenses.length === 0 ? (
         <div className="text-center py-8 bg-gray-50 rounded-lg">
           <p className="text-sm text-gray-500">
-            {searchTerm || filterBy !== 'all' 
+            {searchTerm || filterBy !== 'all' || categoryFilter !== 'all'
               ? '🔍 No expenses match your current filters'
               : '💸 No expenses yet. Add one to get started.'
             }
           </p>
-          {(searchTerm || filterBy !== 'all') && (
+          {(searchTerm || filterBy !== 'all' || categoryFilter !== 'all') && (
             <button
               onClick={() => {
                 setSearchTerm('');
                 setFilterBy('all');
+                setCategoryFilter('all');
               }}
               className="mt-2 text-sm text-blue-600 hover:text-blue-800"
             >
@@ -279,7 +341,7 @@ export default function ExpenseList({
               <div className="block sm:hidden">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start gap-2 mb-1">
+                  <div className="flex items-start gap-2 mb-1">
                       <h4 className="font-medium text-gray-900 text-sm leading-tight truncate">{expense.description}</h4>
                       {expense.paidBy.id === currentUserId && (
                         <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap">
@@ -287,8 +349,13 @@ export default function ExpenseList({
                         </span>
                       )}
                     </div>
-                    <div className="text-lg font-semibold text-gray-900">
-                      💰 ${parseFloat(expense.amount.toString()).toFixed(2)} {expense.currency}
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="text-lg font-semibold text-gray-900">
+                        💰 ${parseFloat(expense.amount.toString()).toFixed(2)} {expense.currency}
+                      </div>
+                      <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                        {getCategoryInfo(expense.category || 'OTHER').shortLabel}
+                      </span>
                     </div>
                   </div>
                   <ExpenseActions
@@ -316,6 +383,9 @@ export default function ExpenseList({
                   </div>
                   <div className="flex items-center gap-4 text-sm text-gray-600">
                     <span>💰 ${parseFloat(expense.amount.toString()).toFixed(2)} {expense.currency}</span>
+                    <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs">
+                      {getCategoryInfo(expense.category || 'OTHER').shortLabel}
+                    </span>
                     <span>👤 {expense.paidBy.name || expense.paidBy.email}</span>
                     <span>📅 {new Date(expense.date).toLocaleDateString()}</span>
                   </div>
@@ -335,7 +405,7 @@ export default function ExpenseList({
       )}
 
       {/* Load More Button - Mobile Optimized */}
-      {hasMore && !searchTerm && filterBy === 'all' && (
+      {hasMore && !searchTerm && filterBy === 'all' && categoryFilter === 'all' && (
         <div className="text-center pt-4">
           <button
             onClick={() => loadExpenses(false)}

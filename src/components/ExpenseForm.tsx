@@ -4,11 +4,29 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { expenseCreateSchema } from "@/lib/schemas";
 
+// Expense categories with display labels and icons
+const EXPENSE_CATEGORIES = [
+  { value: "FOOD", label: "🍽️ Food", shortLabel: "Food" },
+  { value: "GROCERIES", label: "🛒 Groceries", shortLabel: "Groceries" },
+  { value: "TRAVEL", label: "✈️ Travel", shortLabel: "Travel" },
+  { value: "TRANSPORTATION", label: "🚗 Transport", shortLabel: "Transport" },
+  { value: "ENTERTAINMENT", label: "🎬 Entertainment", shortLabel: "Entertainment" },
+  { value: "SHOPPING", label: "🛍️ Shopping", shortLabel: "Shopping" },
+  { value: "UTILITIES", label: "💡 Utilities", shortLabel: "Utilities" },
+  { value: "HOUSING", label: "🏠 Housing", shortLabel: "Housing" },
+  { value: "HEALTH", label: "🏥 Healthcare", shortLabel: "Health" },
+  { value: "EDUCATION", label: "📚 Education", shortLabel: "Education" },
+  { value: "GIFTS", label: "🎁 Gifts", shortLabel: "Gifts" },
+  { value: "FEES", label: "📋 Fees", shortLabel: "Fees" },
+  { value: "OTHER", label: "📦 Other", shortLabel: "Other" },
+];
+
 export default function ExpenseForm({ groupId, members }: { groupId: string; members: { id: string; name?: string | null; email: string }[] }) {
   const router = useRouter();
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USD");
+  const [category, setCategory] = useState("OTHER");
   const [splitMode, setSplitMode] = useState<"EQUAL" | "EXACT">("EQUAL");
   const [customSplits, setCustomSplits] = useState<Record<string, string>>(() => Object.fromEntries(members.map(m => [m.id, ""])));
   const [loading, setLoading] = useState(false);
@@ -17,7 +35,7 @@ export default function ExpenseForm({ groupId, members }: { groupId: string; mem
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const parsed = expenseCreateSchema.safeParse({ description, amount, currency });
+    const parsed = expenseCreateSchema.safeParse({ description, amount, currency, category });
     if (!parsed.success) {
       setError(parsed.error.errors[0]?.message || "Please provide valid inputs");
       return;
@@ -52,6 +70,7 @@ export default function ExpenseForm({ groupId, members }: { groupId: string; mem
     setDescription("");
     setAmount("");
     setCurrency("USD");
+    setCategory("OTHER");
     setSplitMode("EQUAL");
     setCustomSplits(Object.fromEntries(members.map(m => [m.id, ""])));
     router.refresh();
@@ -59,50 +78,74 @@ export default function ExpenseForm({ groupId, members }: { groupId: string; mem
 
   return (
     <form onSubmit={onSubmit} className="border rounded p-3 space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2">
-          <label className="text-sm">Split:</label>
-          <label className="text-sm flex items-center gap-1">
-            <input type="radio" name="split" checked={splitMode === "EQUAL"} onChange={() => setSplitMode("EQUAL")} />
-            Equal
-          </label>
-          <label className="text-sm flex items-center gap-1">
-            <input type="radio" name="split" checked={splitMode === "EXACT"} onChange={() => setSplitMode("EXACT")} />
-            Custom
-          </label>
+      <div className="flex flex-col md:flex-row gap-3 md:gap-2">
+        {/* First row: Description, Amount, Currency */}
+        <div className="flex items-center gap-2 flex-1">
+          <input
+            type="text"
+            placeholder="Description"
+            className="border rounded px-3 py-2 flex-1"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+          />
+          <input
+            type="number"
+            step="0.01"
+            min="0.01"
+            placeholder="Amount"
+            className="border rounded px-3 py-2 w-32"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+          />
+          <select
+            className="border rounded px-2 py-2"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+          >
+            <option value="USD">USD</option>
+          </select>
         </div>
-        <input
-          type="text"
-          placeholder="Description"
-          className="border rounded px-3 py-2 flex-1"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-        />
-        <input
-          type="number"
-          step="0.01"
-          min="0.01"
-          placeholder="Amount"
-          className="border rounded px-3 py-2 w-32"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          required
-        />
-        <select
-          className="border rounded px-2 py-2"
-          value={currency}
-          onChange={(e) => setCurrency(e.target.value)}
-        >
-          <option value="USD">USD</option>
-        </select>
-        <button
-          type="submit"
-          className="bg-black text-white rounded px-4 py-2 disabled:opacity-60"
-          disabled={loading}
-        >
-          {loading ? "Adding..." : "Add expense"}
-        </button>
+
+        {/* Second row: Category, Split Type, Submit */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Category Dropdown */}
+          <div className="flex-1 min-w-[140px]">
+            <select
+              className="border rounded px-3 py-2 w-full text-sm"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              title="Expense Category"
+            >
+              {EXPENSE_CATEGORIES.map((cat) => (
+                <option key={cat.value} value={cat.value}>{cat.label}</option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Split Type */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm whitespace-nowrap">Split:</label>
+            <label className="text-sm flex items-center gap-1">
+              <input type="radio" name="split" checked={splitMode === "EQUAL"} onChange={() => setSplitMode("EQUAL")} />
+              Equal
+            </label>
+            <label className="text-sm flex items-center gap-1">
+              <input type="radio" name="split" checked={splitMode === "EXACT"} onChange={() => setSplitMode("EXACT")} />
+              Custom
+            </label>
+          </div>
+          
+          {/* Submit Button */}
+          <button
+            type="submit"
+            className="bg-black text-white rounded px-4 py-2 disabled:opacity-60 whitespace-nowrap"
+            disabled={loading}
+          >
+            {loading ? "Adding..." : "Add expense"}
+          </button>
+        </div>
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       {splitMode === "EXACT" ? (
