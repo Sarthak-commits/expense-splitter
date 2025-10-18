@@ -2,6 +2,57 @@
 
 import { useState, useEffect } from "react";
 
+// Expense categories with display labels and icons (matching other components)
+const EXPENSE_CATEGORIES = [
+  { value: "FOOD", label: "🍽️ Food", shortLabel: "Food", color: "bg-red-100 text-red-800" },
+  { value: "GROCERIES", label: "🛒 Groceries", shortLabel: "Groceries", color: "bg-green-100 text-green-800" },
+  { value: "TRAVEL", label: "✈️ Travel", shortLabel: "Travel", color: "bg-blue-100 text-blue-800" },
+  { value: "TRANSPORTATION", label: "🚗 Transport", shortLabel: "Transport", color: "bg-indigo-100 text-indigo-800" },
+  { value: "ENTERTAINMENT", label: "🎬 Entertainment", shortLabel: "Entertainment", color: "bg-purple-100 text-purple-800" },
+  { value: "SHOPPING", label: "🛍️ Shopping", shortLabel: "Shopping", color: "bg-pink-100 text-pink-800" },
+  { value: "UTILITIES", label: "💡 Utilities", shortLabel: "Utilities", color: "bg-yellow-100 text-yellow-800" },
+  { value: "HOUSING", label: "🏠 Housing", shortLabel: "Housing", color: "bg-orange-100 text-orange-800" },
+  { value: "HEALTH", label: "🏥 Healthcare", shortLabel: "Health", color: "bg-teal-100 text-teal-800" },
+  { value: "EDUCATION", label: "📚 Education", shortLabel: "Education", color: "bg-cyan-100 text-cyan-800" },
+  { value: "GIFTS", label: "🎁 Gifts", shortLabel: "Gifts", color: "bg-rose-100 text-rose-800" },
+  { value: "FEES", label: "📋 Fees", shortLabel: "Fees", color: "bg-gray-100 text-gray-800" },
+  { value: "OTHER", label: "📦 Other", shortLabel: "Other", color: "bg-slate-100 text-slate-800" },
+];
+
+// Helper function to get category display info
+function getCategoryInfo(category: string) {
+  const cat = EXPENSE_CATEGORIES.find(c => c.value === category);
+  return cat || { value: "OTHER", label: "📦 Other", shortLabel: "Other", color: "bg-slate-100 text-slate-800" };
+}
+
+// Interface for expense data
+interface ExpenseData {
+  id: string;
+  description: string;
+  amount: string; // Prisma Decimal as string
+  currency: string;
+  category: string;
+  paidBy: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+}
+
+// Interface for category spending summary
+interface CategorySpending {
+  category: string;
+  amount: number;
+  percentage: number;
+  count: number;
+  topSpender?: {
+    userId: string;
+    name: string | null;
+    email: string;
+    amount: number;
+  };
+}
+
 interface BalanceUser {
   user: {
     id: string;
@@ -25,6 +76,7 @@ interface BalanceDisplayProps {
   groupId: string;
   balances: BalanceUser[];
   currentUserId: string;
+  expenses?: ExpenseData[]; // Optional expense data for category insights
   onSettlementRecorded?: () => void;
 }
 
@@ -32,6 +84,7 @@ export default function BalanceDisplay({
   groupId, 
   balances, 
   currentUserId, 
+  expenses = [],
   onSettlementRecorded 
 }: BalanceDisplayProps) {
   const [suggestions, setSuggestions] = useState<SettlementSuggestion[]>([]);
@@ -40,6 +93,7 @@ export default function BalanceDisplay({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showCategoryBreakdown, setShowCategoryBreakdown] = useState(false);
 
   // Calculate balance statistics
   const totalOwed = balances.reduce((sum, b) => {
@@ -54,6 +108,67 @@ export default function BalanceDisplay({
 
   const settledCount = balances.filter(b => Math.abs(parseFloat(b.amount.toString())) < 0.01).length;
   const unsettledCount = balances.length - settledCount;
+
+  // Calculate category spending breakdown
+  const categorySpending: CategorySpending[] = (() => {
+    if (!expenses.length) return [];
+    
+    const categoryTotals = new Map<string, {
+      amount: number;
+      count: number;
+      spenders: Map<string, { amount: number; name: string | null; email: string; }>;
+    }>();
+
+    expenses.forEach(expense => {
+      const category = expense.category || 'OTHER';
+      const amount = parseFloat(expense.amount);
+      const spenderId = expense.paidBy.id;
+      
+      if (!categoryTotals.has(category)) {
+        categoryTotals.set(category, {
+          amount: 0,
+          count: 0,
+          spenders: new Map()
+        });
+      }
+      
+      const categoryData = categoryTotals.get(category)!;
+      categoryData.amount += amount;
+      categoryData.count += 1;
+      
+      if (!categoryData.spenders.has(spenderId)) {
+        categoryData.spenders.set(spenderId, {
+          amount: 0,
+          name: expense.paidBy.name,
+          email: expense.paidBy.email
+        });
+      }
+      
+      categoryData.spenders.get(spenderId)!.amount += amount;
+    });
+    
+    const totalSpent = Array.from(categoryTotals.values()).reduce((sum, cat) => sum + cat.amount, 0);
+    
+    return Array.from(categoryTotals.entries())
+      .map(([category, data]) => {
+        const topSpenderEntry = Array.from(data.spenders.entries())
+          .sort(([,a], [,b]) => b.amount - a.amount)[0];
+        
+        return {
+          category,
+          amount: data.amount,
+          percentage: totalSpent > 0 ? (data.amount / totalSpent) * 100 : 0,
+          count: data.count,
+          topSpender: topSpenderEntry ? {
+            userId: topSpenderEntry[0],
+            ...topSpenderEntry[1]
+          } : undefined
+        };
+      })
+      .sort((a, b) => b.amount - a.amount);
+  })();
+
+  const totalCategorySpending = categorySpending.reduce((sum, cat) => sum + cat.amount, 0);
 
   // Load settlement suggestions
   async function loadSuggestions() {
@@ -170,6 +285,119 @@ export default function BalanceDisplay({
           </div>
         </div>
       </div>
+
+      {/* Category Spending Breakdown - Mobile Optimized */}
+      {categorySpending.length > 0 && (
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-3 sm:p-4">
+          <div className="flex items-start sm:items-center justify-between mb-3 gap-2">
+            <h4 className="font-medium text-purple-900 text-sm sm:text-base flex-1">
+              📈 Spending by Category (${totalCategorySpending.toFixed(2)} total)
+            </h4>
+            <button
+              onClick={() => setShowCategoryBreakdown(!showCategoryBreakdown)}
+              className="text-xs sm:text-sm text-purple-600 hover:text-purple-800 px-2 py-1 rounded touch-manipulation"
+            >
+              {showCategoryBreakdown ? '⬆️' : '⬇️'}
+            </button>
+          </div>
+
+          {showCategoryBreakdown && (
+            <div className="space-y-3">
+              {/* Top 3 Categories Overview - Always Visible */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {categorySpending.slice(0, 3).map((cat, index) => {
+                  const categoryInfo = getCategoryInfo(cat.category);
+                  const isCurrentUserTopSpender = cat.topSpender?.userId === currentUserId;
+                  
+                  return (
+                    <div key={cat.category} className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${categoryInfo.color}`}>
+                            {index + 1}. {categoryInfo.shortLabel}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-gray-900">${cat.amount.toFixed(2)}</div>
+                          <div className="text-xs text-gray-600">{cat.percentage.toFixed(1)}%</div>
+                        </div>
+                      </div>
+                      
+                      {/* Visual Progress Bar */}
+                      <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            index === 0 ? 'bg-purple-500' : 
+                            index === 1 ? 'bg-blue-500' : 'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min(cat.percentage, 100)}%` }}
+                        ></div>
+                      </div>
+                      
+                      {/* Top Spender Info */}
+                      {cat.topSpender && (
+                        <div className="text-xs text-gray-600">
+                          <span className={isCurrentUserTopSpender ? 'font-medium text-purple-700' : ''}>
+                            Top: {cat.topSpender.name || cat.topSpender.email}
+                            {isCurrentUserTopSpender && ' (You)'}
+                          </span>
+                          <span className="ml-1">${cat.topSpender.amount.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* All Categories List - Collapsible */}
+              {categorySpending.length > 3 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-purple-700 font-medium">
+                    All {categorySpending.length} Categories:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {categorySpending.slice(3).map((cat) => {
+                      const categoryInfo = getCategoryInfo(cat.category);
+                      const isCurrentUserTopSpender = cat.topSpender?.userId === currentUserId;
+                      
+                      return (
+                        <div key={cat.category} className="flex items-center justify-between p-2 bg-white rounded border border-gray-200">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className={`text-xs px-2 py-1 rounded-full ${categoryInfo.color} whitespace-nowrap`}>
+                              {categoryInfo.shortLabel}
+                            </span>
+                            {cat.topSpender && (
+                              <span className="text-xs text-gray-600 truncate">
+                                {isCurrentUserTopSpender ? 'You' : (cat.topSpender.name || cat.topSpender.email)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className="text-sm font-medium text-gray-900">${cat.amount.toFixed(2)}</div>
+                            <div className="text-xs text-gray-600">{cat.percentage.toFixed(1)}%</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              
+              {/* Quick Insights */}
+              <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+                <p className="text-xs font-medium text-purple-900 mb-2">💡 Quick Insights:</p>
+                <div className="space-y-1 text-xs text-purple-800">
+                  {categorySpending[0] && (
+                    <p>• Most spending in {getCategoryInfo(categorySpending[0].category).shortLabel} (${categorySpending[0].amount.toFixed(2)})</p>
+                  )}
+                  <p>• Average per category: ${(totalCategorySpending / categorySpending.length).toFixed(2)}</p>
+                  <p>• Total expenses tracked: {categorySpending.reduce((sum, cat) => sum + cat.count, 0)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Success/Error Messages */}
       {success && (

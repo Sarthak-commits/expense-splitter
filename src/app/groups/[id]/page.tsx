@@ -56,6 +56,7 @@ export default async function GroupDetailPage({ params, searchParams }: { params
       currency: true,
       date: true,
       createdAt: true,
+      category: true, // Add category for spending insights
       paidBy: { select: { id: true, name: true, email: true } },
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -78,7 +79,7 @@ export default async function GroupDetailPage({ params, searchParams }: { params
 
   const expensesAll = await prisma.expense.findMany({
     where: { groupId },
-    select: { paidById: true, amount: true },
+    select: { paidById: true, amount: true, category: true }, // Add category for balance insights
   });
   const splitsAll = await prisma.expenseSplit.findMany({
     where: { expense: { groupId } },
@@ -178,6 +179,14 @@ export default async function GroupDetailPage({ params, searchParams }: { params
           groupId={group.id}
           balances={balances}
           currentUserId={userId}
+          expenses={expenses.map(e => ({ // Pass expense data for category insights
+            id: e.id,
+            description: e.description,
+            amount: e.amount,
+            currency: e.currency,
+            category: e.category || 'OTHER',
+            paidBy: e.paidBy
+          }))}
           onSettlementRecorded={() => {
             // This would ideally trigger a refresh, but for now we'll rely on manual refresh
             // In a real app, you might want to use a state management solution
